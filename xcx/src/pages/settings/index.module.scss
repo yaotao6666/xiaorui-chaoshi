@@ -1,0 +1,124 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding: 32rpx $page-padding 48rpx;
+  background: linear-gradient(180deg, #eefdf9 0%, $color-bg-page 100%);
+}
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: 32rpx;
+  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.title {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.desc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.label {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.input {
+  width: 100%;
+  min-height: 88rpx;
+  box-sizing: border-box;
+  padding: 24rpx;
+  border-radius: $radius-md;
+  border: 2rpx solid $color-border;
+  background: #fbfcfe;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.switchText {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.actions {
+  margin-top: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.primaryButton {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  border: 2rpx solid transparent;
+  border-radius: $radius-button;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+}
+
+.ghostButton {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-button;
+  background: $color-bg-card;
+}
+
+.primaryText {
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+}
+
+.ghostText {
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+}
+
+.tipBox {
+  margin-top: 24rpx;
+  border-radius: $radius-lg;
+  padding: 28rpx 32rpx;
+  background: #fff7ed;
+  border: 2rpx solid #fed7aa;
+}
+
+.tipTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: #9a3412;
+  margin-bottom: 12rpx;
+}
+
+.tipText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}

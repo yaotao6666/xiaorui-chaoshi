@@ -1,0 +1,174 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding: 32rpx $page-padding 48rpx;
+  background: linear-gradient(180deg, #edfdfb 0%, $color-bg-page 100%);
+}
+
+.heroCard {
+  width: 100%;
+  max-width: $max-content-width;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: 48rpx 32rpx;
+  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.eyebrow {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.title {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  line-height: $line-height-tight;
+}
+
+.desc {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}
+
+.grid {
+  margin-top: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.panel {
+  width: 100%;
+  max-width: $max-content-width;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: 32rpx;
+  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.panelTitle {
+  font-size: 32rpx;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.statusTag {
+  align-self: flex-start;
+  min-width: 160rpx;
+  padding: 10rpx 20rpx;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  background: #d1fae5;
+  color: #047857;
+}
+
+.statusTagWarning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.statusTagError {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.kvList {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.kvItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.kvLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.kvValue {
+  flex: 1;
+  text-align: right;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.button {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  border: 2rpx solid transparent;
+  border-radius: $radius-button;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.ghostButton {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  background: $color-bg-card;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-button;
+}
+
+.buttonText {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+  color: $color-text-white;
+}
+
+.ghostButtonText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.tipCard {
+  width: 100%;
+  max-width: $max-content-width;
+  margin-top: 24rpx;
+  background: rgba(20, 184, 166, 0.08);
+  border-radius: $radius-lg;
+  padding: 28rpx 32rpx;
+  border: 2rpx solid rgba(20, 184, 166, 0.14);
+}
+
+.tipTitle {
+  font-size: $font-size-md;
+  color: $color-primary-dark;
+  font-weight: $font-weight-semibold;
+  margin-bottom: 12rpx;
+}
+
+.tipText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}

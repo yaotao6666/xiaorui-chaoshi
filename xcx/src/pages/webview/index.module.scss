@@ -1,0 +1,34 @@
+@use '@/styles/variables.scss' as *;
+
+.emptyState {
+  min-height: 100vh;
+  padding: 0 $page-padding;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-bg-page;
+}
+
+.card {
+  width: 100%;
+  max-width: $max-content-width;
+  padding: 40rpx 32rpx;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.title {
+  font-size: $font-size-lg;
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.desc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}

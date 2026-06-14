@@ -1,0 +1,19 @@
+[Unit]
+Description=chaoshi_api backend service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/usr/local/bin
+ExecStart=/usr/local/bin/chaoshi_api
+Restart=always
+RestartSec=3
+EnvironmentFile=/etc/chaoshi_api/.env.production
+LimitNOFILE=65535
+StandardOutput=append:/var/log/chaoshi_api/app.log
+StandardError=append:/var/log/chaoshi_api/app.error.log
+
+[Install]
+WantedBy=multi-user.target

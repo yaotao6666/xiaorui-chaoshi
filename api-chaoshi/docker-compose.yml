@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: chaoshi_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-chaoshi_api}
+      MYSQL_USER: ${MYSQL_USER:-chaoshi}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-chaoshi123}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "33061:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./migrations:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chaoshi_network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: chaoshi_redis
+    restart: unless-stopped
+    # ports:
+    #   - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis123}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chaoshi_network
+
+  # 后端 API 服务
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chaoshi_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-chaoshi}
+      DB_PASSWORD: ${DB_PASSWORD:-chaoshi123}
+      DB_NAME: ${DB_NAME:-chaoshi_api}
+      DB_CHARSET: ${DB_CHARSET:-utf8mb4}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      REDIS_DB: ${REDIS_DB:-0}
+      JWT_SECRET: ${JWT_SECRET:-default-secret-change-in-production}
+      JWT_EXPIRE: ${JWT_EXPIRE:-720}
+      APP_HOST: ${APP_HOST:-0.0.0.0}
+      APP_PORT: ${APP_PORT:-8081}
+      APP_ENV: ${APP_ENV:-development}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
+      WECHAT_PAY_SP_MCH_ID: ${WECHAT_PAY_SP_MCH_ID:-}
+      WECHAT_PAY_SP_API_V3_KEY: ${WECHAT_PAY_SP_API_V3_KEY:-}
+      WECHAT_PAY_SP_CERT_SERIAL_NO: ${WECHAT_PAY_SP_CERT_SERIAL_NO:-}
+      WECHAT_PAY_SP_PRIVATE_KEY: ${WECHAT_PAY_SP_PRIVATE_KEY:-}
+      WECHAT_PAY_SP_PUBLIC_KEY: ${WECHAT_PAY_SP_PUBLIC_KEY:-}
+      WECHAT_PAY_SP_CALLBACK_URL: ${WECHAT_PAY_SP_CALLBACK_URL:-}
+      QINIU_ACCESS_KEY: ${QINIU_ACCESS_KEY:-}
+      QINIU_SECRET_KEY: ${QINIU_SECRET_KEY:-}
+      QINIU_BUCKET: ${QINIU_BUCKET:-}
+      QINIU_DOMAIN: ${QINIU_DOMAIN:-}
+      QINIU_UPLOAD_URL: ${QINIU_UPLOAD_URL:-}
+    volumes:
+      - ./certs:/app/certs:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - chaoshi_network
+
+  # 构建 Linux 可执行文件（输出到宿主机 ./dist）
+  go-build-linux:
+    image: golang:1.21-alpine
+    container_name: chaoshi_go_build_linux
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      GOPROXY: https://goproxy.cn,direct
+      CGO_ENABLED: 0
+      GOOS: linux
+      GOARCH: amd64
+      GOFLAGS: -buildvcs=false
+    command:
+      - /bin/sh
+      - -c
+      - apk add --no-cache git ca-certificates && mkdir -p dist && go mod download && go build -trimpath -ldflags "-s -w" -o dist/chaoshi_api_linux_amd64 ./cmd/server
+
+networks:
+  chaoshi_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
