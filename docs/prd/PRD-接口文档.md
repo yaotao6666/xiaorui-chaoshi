@@ -9,9 +9,12 @@
   - 请求方式：`multipart/form-data`
   - 返回字段：`path`、`url`、`filename`、`scope`
 - 商家侧认证方式为账号密码登录；员工消息推送标识使用 `push_openid` 管理
-- 订单创建成功响应不返回 `pay_params`
-- 当前版本未启用在线支付
-- 当前版本不提供微信支付回调、在线退款、分账历史相关接口
+- 订单创建成功响应不直接返回 `pay_params`，而是返回支付下一步动作
+- 当前版本已接入江苏银行微信小程序支付主链路
+- 当前版本提供：
+  - `POST /api/v1/user/orders/:order_id/pay/prepare`
+  - `POST /api/v1/payments/jsbank/notify`
+- 当前版本已支持“商家端发起退款（江苏银行）”，暂不提供分账历史相关接口
 - 当前数据库与代码模型不包含 `sub_mch_id`、`payment_config_status`、`profit_sharing_*` 等旧支付字段
 
 ## 1. 文档定位
@@ -207,18 +210,111 @@
   - 订单 `status=5`：退款中（已发起退款处理，等待最终结果）
   - 订单 `status=6`：已退款（退款完成后写入）
   - `refunded_at`：在订单进入 `status=6` 时写入
-- 当前版本未启用在线支付，订单接口不定义 `pay_params`、支付回调和分账状态字段
+- 创建订单成功后返回：
+  - `payment.enabled`
+  - `payment.status`
+  - `payment.message`
+  - `payment.next_action`
+  - `payment.prepare_url`
+- 当 `pay_amount > 0` 且来源为 `xcx_shell` 时，前端需按 `payment.next_action = open_xcx_payment` 跳回小程序支付页
+- 当 `pay_amount > 0` 且不是 `xcx_shell` 时，前端创建待支付订单后仅展示“请在小程序中完成支付”引导
+- 当 `pay_amount <= 0` 时，订单会直接进入已支付状态，前端跳订单详情即可
 
 ### 2.6 支付接口
 
-- 当前版本未启用在线支付
-- 创建订单成功后，前端按订单结果进入待后续支付接入状态
-- 当前版本不定义微信支付回调、在线退款和分账接口
+- 支付发起：`POST /api/v1/user/orders/:order_id/pay/prepare`
+- 支付回调：`POST /api/v1/payments/jsbank/notify`
+- 当前在线支付只支持“小程序壳内发起的江苏银行微信小程序支付”
+- 当前在线退款支持“商家端发起退款（江苏银行）”
+- 当前版本不提供分账接口
+
+#### `POST /api/v1/merchant/orders/:order_id/refund`
+
+- **用途**：商家对已支付/已完成订单发起退款（江苏银行）
+- **鉴权**：商家登录态
+- **请求**：
+
+```json
+{
+  "refund_amount": 18.6,
+  "reason": "用户申请退款"
+}
+```
+
+说明：
+
+- `refund_amount` 为空或 `<= 0` 时，默认按订单实付金额全额退款
+- 仅允许对 `status=2(已支付)` 或 `status=3(已完成)` 的订单发起退款
+- 发起后订单会进入 `status=5(退款中)`；退款完成后进入 `status=6(已退款)` 并写入 `refunded_at`
+
+- **成功响应**：
+
+```json
+{
+  "code": 0,
+  "message": "退款已提交",
+  "data": null
+}
+```
+
+#### `POST /api/v1/user/orders/:order_id/pay/prepare`
+
+- **用途**：为待支付订单生成江苏银行小程序支付参数
+- **鉴权**：`Authorization: Bearer {user_token}`
+- **请求**：
+
+```json
+{
+  "return_path": "/pages/store/order-detail",
+  "source": "xcx_shell"
+}
+```
+
+- **成功响应**：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "order_id": 123,
+    "order_no": "202606140001",
+    "merchant_id": 2,
+    "pay_amount": 18.6,
+    "channel": "jsbank_wechat_mini",
+    "pay_params": {
+      "timeStamp": "1710000000",
+      "nonceStr": "random",
+      "package": "prepay_id=xxx",
+      "signType": "RSA",
+      "paySign": "signature"
+    },
+    "return_target": "/pages/store/order-detail?order_id=123&merchant_id=2"
+  }
+}
+```
 
 当前重点约束：
 
-- 订单创建成功响应不返回 `pay_params`
-- 与支付相关的历史字段和历史表不属于当前数据库基线
+- 仅允许当前登录用户为自己的 `status=1` 待支付订单发起支付
+- `source` 当前固定为 `xcx_shell`
+- 返回的 `pay_params` 仅供 `xcx` 原生页调用 `Taro.requestPayment`
+- H5 页面不直接调用小程序支付
+
+#### `POST /api/v1/payments/jsbank/notify`
+
+- **用途**：接收江苏银行支付成功回调并更新订单状态
+- **请求格式**：`application/x-www-form-urlencoded`
+- **核心处理**：
+  - 使用江苏银行公钥证书验签
+  - 根据商户订单号映射 `orders.order_no`
+  - 幂等更新订单 `status/transaction_id/paid_at/pay_notify_payload`
+
+当前重点约束：
+
+- 回调成功后，订单状态从 `1=待支付` 更新为 `2=已支付`
+- 重复回调必须幂等
+- 与支付相关的历史分账字段和历史表不属于当前数据库基线
 
 ### 2.7 数据分析接口
 

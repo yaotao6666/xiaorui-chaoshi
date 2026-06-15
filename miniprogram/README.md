@@ -79,25 +79,10 @@ npm run build:mp-weixin
 
 构建产物在 `dist/build/mp-weixin` 目录。
 
-### 双小程序发布
-
-- 当前项目支持通过一套源码切换发布 2 个微信小程序。
-- 品牌差异配置位于：
-  - `config/brands/xunmeng.json`
-  - `config/brands/caixu.json`
-- 生产环境域名配置位于：
-  - `.env.production.xunmeng`
-  - `.env.production.caixu`
-- 预构建脚本：
-  - `scripts/apply-brand-config.mjs`
-- 发布命令：
-
+ 
 ```bash
 # 商家助手
-npm run build:mp-weixin:xunmeng
-
-# 财旭商贸
-npm run build:mp-weixin:caixu
+npm run build:mp-weixin
 ```
 
 - 执行上述命令时，脚本会自动：

@@ -4,14 +4,18 @@ import (
 	"chaoshi_api/internal/middleware"
 	"chaoshi_api/internal/models"
 	"chaoshi_api/internal/services/orderquery"
+	"chaoshi_api/internal/services/payment/jsbank"
+	"chaoshi_api/internal/utils"
 	"chaoshi_api/pkg/database"
 	"chaoshi_api/pkg/response"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type CompleteOrderRequest struct {
@@ -207,7 +211,135 @@ type RefundRequest struct {
 }
 
 func RefundOrder(c *gin.Context) {
-	response.Fail(c, http.StatusBadRequest, response.CodeRefundFailed, "当前版本暂未启用在线退款")
+	merchantID := middleware.GetMerchantID(c)
+	orderID, _ := strconv.ParseUint(c.Param("order_id"), 10, 64)
+	if orderID == 0 {
+		response.Fail(c, http.StatusBadRequest, response.CodeParamError, "订单参数错误")
+		return
+	}
+
+	var req RefundRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, response.CodeParamError, "参数错误")
+		return
+	}
+
+	order, err := loadMerchantOrderByID(merchantID, orderID)
+	if err != nil {
+		response.Fail(c, http.StatusNotFound, response.CodeOrderNotFound, "订单不存在")
+		return
+	}
+
+	if order.PayAmount <= 0 {
+		response.Fail(c, http.StatusBadRequest, response.CodeRefundFailed, "当前订单无需退款")
+		return
+	}
+	if order.Status != 2 && order.Status != 3 {
+		response.Fail(c, http.StatusBadRequest, response.CodeRefundFailed, "当前订单状态不可退款")
+		return
+	}
+
+	refundAmount := req.RefundAmount
+	if refundAmount <= 0 {
+		refundAmount = order.PayAmount
+	}
+	if refundAmount <= 0 || refundAmount > order.PayAmount {
+		response.Fail(c, http.StatusBadRequest, response.CodeRefundFailed, "退款金额不合法")
+		return
+	}
+
+	var existing models.Refund
+	if err := database.DB.Where("order_id = ?", order.ID).Order("id DESC").First(&existing).Error; err == nil {
+		if existing.Status == 0 {
+			response.Fail(c, http.StatusBadRequest, response.CodeRefundFailed, "当前订单退款处理中")
+			return
+		}
+		if existing.Status == 1 {
+			response.Fail(c, http.StatusBadRequest, response.CodeRefundFailed, "当前订单已退款")
+			return
+		}
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		response.Fail(c, http.StatusInternalServerError, response.CodeServerError, "获取退款记录失败")
+		return
+	}
+
+	refundNo := utils.GenerateRefundNo()
+	reason := strings.TrimSpace(req.Reason)
+	originalStatus := order.Status
+
+	tx := database.DB.Begin()
+	refund := models.Refund{
+		OrderID:      order.ID,
+		RefundNo:     refundNo,
+		RefundAmount: refundAmount,
+		RefundReason: reason,
+		Status:       0,
+	}
+	if err := tx.Create(&refund).Error; err != nil {
+		tx.Rollback()
+		response.Fail(c, http.StatusInternalServerError, response.CodeServerError, "创建退款记录失败")
+		return
+	}
+	if err := tx.Model(&models.Order{}).
+		Where("id = ? AND merchant_id = ?", order.ID, merchantID).
+		Update("status", 5).Error; err != nil {
+		tx.Rollback()
+		response.Fail(c, http.StatusInternalServerError, response.CodeServerError, "更新订单状态失败")
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		response.Fail(c, http.StatusInternalServerError, response.CodeServerError, "提交退款记录失败")
+		return
+	}
+
+	client, err := jsbank.NewClient()
+	if err != nil {
+		database.DB.Model(&models.Refund{}).Where("id = ?", refund.ID).Update("status", 2)
+		database.DB.Model(&models.Order{}).Where("id = ?", order.ID).Update("status", originalStatus)
+		response.Fail(c, http.StatusInternalServerError, response.CodeRefundFailed, err.Error())
+		return
+	}
+
+	refundResult, err := client.Refund(jsbank.RefundRequest{
+		OrderNo:  order.OrderNo,
+		RefundNo: refundNo,
+		Amount:   refundAmount,
+	})
+	if err != nil {
+		database.DB.Model(&models.Refund{}).Where("id = ?", refund.ID).Update("status", 2)
+		database.DB.Model(&models.Order{}).Where("id = ?", order.ID).Update("status", originalStatus)
+		response.Fail(c, http.StatusInternalServerError, response.CodeRefundFailed, err.Error())
+		return
+	}
+
+	orderStatus := strings.TrimSpace(refundResult.OrderStatus)
+	switch orderStatus {
+	case "2":
+		response.SuccessWithMessage(c, "退款处理中", nil)
+		return
+	case "1", "3", "":
+		now := time.Now()
+		updates := map[string]interface{}{
+			"status":      1,
+			"refunded_at": &now,
+		}
+		if refundID := strings.TrimSpace(refundResult.Raw["refundId"]); refundID != "" {
+			updates["refund_id"] = refundID
+		}
+		database.DB.Model(&models.Refund{}).Where("id = ?", refund.ID).Updates(updates)
+		database.DB.Model(&models.Order{}).Where("id = ?", order.ID).Updates(map[string]interface{}{
+			"status":      6,
+			"refunded_at": &now,
+		})
+		response.SuccessWithMessage(c, "退款已提交", nil)
+		return
+	default:
+		database.DB.Model(&models.Refund{}).Where("id = ?", refund.ID).Update("status", 2)
+		database.DB.Model(&models.Order{}).Where("id = ?", order.ID).Update("status", originalStatus)
+		response.Fail(c, http.StatusBadRequest, response.CodeRefundFailed, "江苏银行退款失败")
+		return
+	}
 }
 
 func GetOrderStatistics(c *gin.Context) {
@@ -227,7 +359,7 @@ func GetOrderStatistics(c *gin.Context) {
 	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND DATE(created_at) = CURDATE() AND status >= 2", merchantID).Select("COALESCE(SUM(pay_amount), 0)").Scan(&todayAmount)
 	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND status = 1", merchantID).Count(&pendingOrders)
 	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND status = 3", merchantID).Count(&completedOrders)
-	database.DB.Model(&models.Refund{}).Joins("JOIN orders ON orders.id = refunds.order_id").Where("orders.merchant_id = ? AND refunds.status = 2", merchantID).Select("COALESCE(SUM(refund_amount), 0)").Scan(&refundedAmount)
+	database.DB.Model(&models.Refund{}).Joins("JOIN orders ON orders.id = refunds.order_id").Where("orders.merchant_id = ? AND refunds.status = 1", merchantID).Select("COALESCE(SUM(refund_amount), 0)").Scan(&refundedAmount)
 
 	response.Success(c, gin.H{
 		"total_orders":     totalOrders,

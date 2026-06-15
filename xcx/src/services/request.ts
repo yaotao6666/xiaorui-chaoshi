@@ -1,13 +1,21 @@
 import Taro from '@tarojs/taro'
 import type { ApiEnvelope } from '@/types/auth'
+import { getStoredUserSession } from '@/services/storage'
 
-export async function postJson<T>(url: string, data: Record<string, unknown>) {
+export async function postJson<T>(
+  url: string,
+  data: Record<string, unknown>,
+  options: { withAuth?: boolean } = {}
+) {
+  const { withAuth = false } = options
+  const session = withAuth ? getStoredUserSession() : null
   const response = await Taro.request<ApiEnvelope<T> | T>({
     url,
     method: 'POST',
     data,
     header: {
       'Content-Type': 'application/json',
+      ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
     },
   })
 

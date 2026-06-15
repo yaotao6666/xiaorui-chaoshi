@@ -10,8 +10,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const apiBaseUrl = trimTrailingSlash(env.VITE_API_BASE_URL || 'http://localhost:8080')
   const proxyTarget = trimTrailingSlash(env.VITE_DEV_PROXY_TARGET || apiBaseUrl)
+  const h5Base = env.VITE_H5_BASE || (mode === 'production' ? '/h5/' : '/')
 
   return {
+    base: h5Base,
     plugins: [
       uni()
     ],

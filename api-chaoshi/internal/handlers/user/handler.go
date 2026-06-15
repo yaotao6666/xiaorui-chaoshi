@@ -663,6 +663,7 @@ type CreateOrderRequest struct {
 	ContactPhone     string  `json:"contact_phone"`
 	PickupPointID    uint64  `json:"pickup_point_id"`
 	Remark           string  `json:"remark"`
+	Source           string  `json:"source"`
 	Items            []struct {
 		ProductID uint64  `json:"product_id" binding:"required"`
 		Quantity  uint    `json:"quantity" binding:"required,min=1"`
@@ -858,6 +859,13 @@ func CreateOrder(c *gin.Context) {
 
 	orderNo := utils.GenerateOrderNo(req.MerchantID)
 	verifyCode := utils.GenerateVerifyCode()
+	orderStatus := uint8(1)
+	var paidAt *time.Time
+	if payAmount <= 0 {
+		orderStatus = 2
+		now := time.Now()
+		paidAt = &now
+	}
 
 	tx := database.DB.Begin()
 
@@ -876,7 +884,8 @@ func CreateOrder(c *gin.Context) {
 		ContactPhone:     req.ContactPhone,
 		Remark:           req.Remark,
 		VerifyCode:       verifyCode,
-		Status:           1,
+		Status:           orderStatus,
+		PaidAt:           paidAt,
 	}
 	if pickupPoint != nil {
 		pickupPointID := pickupPoint.ID
@@ -945,8 +954,8 @@ func CreateOrder(c *gin.Context) {
 		"pay_amount":        payAmount,
 	})
 
-	// 如果是支付金额大于0的订单，更新支付状态
-	if payAmount > 0 {
+	// 仅在无需在线支付的零元订单中，直接更新用户首付费时间。
+	if payAmount <= 0 {
 		now := time.Now()
 		database.DB.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
 			"has_paid":      true,
@@ -954,12 +963,27 @@ func CreateOrder(c *gin.Context) {
 		})
 	}
 
+	paymentStatus := "pending"
+	paymentMessage := "订单已创建，请继续完成支付"
+	nextAction := "show_xcx_pay_guide"
+	prepareURL := fmt.Sprintf("/api/v1/user/orders/%d/pay/prepare", order.ID)
+	if payAmount <= 0 {
+		paymentStatus = "paid"
+		paymentMessage = "当前订单无需支付"
+		nextAction = "view_order_detail"
+		prepareURL = ""
+	} else if strings.TrimSpace(req.Source) == "xcx_shell" {
+		nextAction = "open_xcx_payment"
+	}
+
 	response.Success(c, gin.H{
 		"order": order,
 		"payment": gin.H{
-			"enabled": false,
-			"status":  "pending_integration",
-			"message": "当前版本暂未启用在线支付",
+			"enabled":     payAmount > 0,
+			"status":      paymentStatus,
+			"message":     paymentMessage,
+			"next_action": nextAction,
+			"prepare_url": prepareURL,
 		},
 	})
 }

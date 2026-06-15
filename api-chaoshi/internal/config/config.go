@@ -22,6 +22,7 @@ type AppConfig struct {
 	Storage   Storage   // 本地文件存储配置
 	WechatPay WechatPay // 微信支付配置
 	Wechat    Wechat    // 微信小程序配置
+	JsBankPay JsBankPay // 江苏银行支付配置
 }
 
 // App 应用配置
@@ -81,6 +82,22 @@ type WechatPay struct {
 type Wechat struct {
 	AppID     string // 微信小程序AppID
 	AppSecret string // 微信小程序AppSecret
+}
+
+// JsBankPay 江苏银行支付配置
+type JsBankPay struct {
+	Enabled        bool
+	AppID          string
+	MchID          string
+	MchName        string
+	MasterAccount  string
+	PartnerID      string
+	DeviceNo       string
+	PostURL        string
+	NotifyURL      string
+	PFXPath        string
+	PFXPassword    string
+	PublicCertPath string
 }
 
 // InitConfig 初始化配置
@@ -226,6 +243,46 @@ func mergeConfig() {
 		Config.WechatPay.CallbackURL = viper.GetString("WECHAT_PAY_SP_CALLBACK_URL")
 	}
 
+	if viper.IsSet("JSBANK_PAY_ENABLED") {
+		Config.JsBankPay.Enabled = viper.GetBool("JSBANK_PAY_ENABLED")
+	}
+	if viper.IsSet("JSBANK_PAY_APP_ID") {
+		Config.JsBankPay.AppID = viper.GetString("JSBANK_PAY_APP_ID")
+	}
+	if viper.IsSet("JSBANK_PAY_MCH_ID") {
+		Config.JsBankPay.MchID = viper.GetString("JSBANK_PAY_MCH_ID")
+	}
+	if viper.IsSet("JSBANK_PAY_MCH_NAME") {
+		Config.JsBankPay.MchName = viper.GetString("JSBANK_PAY_MCH_NAME")
+	}
+	if viper.IsSet("JSBANK_PAY_MASTER_ACCOUNT") {
+		Config.JsBankPay.MasterAccount = viper.GetString("JSBANK_PAY_MASTER_ACCOUNT")
+	}
+	if viper.IsSet("JSBANK_PAY_PARTNER_ID") {
+		Config.JsBankPay.PartnerID = viper.GetString("JSBANK_PAY_PARTNER_ID")
+	}
+	if viper.IsSet("JSBANK_PAY_DEVICE_NO") {
+		Config.JsBankPay.DeviceNo = viper.GetString("JSBANK_PAY_DEVICE_NO")
+	}
+	if viper.IsSet("JSBANK_PAY_POST_URL") {
+		Config.JsBankPay.PostURL = viper.GetString("JSBANK_PAY_POST_URL")
+	}
+	if viper.IsSet("JSBANK_PAY_NOTIFY_URL") {
+		Config.JsBankPay.NotifyURL = viper.GetString("JSBANK_PAY_NOTIFY_URL")
+	}
+	if viper.IsSet("JSBANK_PAY_PFX_PATH") {
+		Config.JsBankPay.PFXPath = viper.GetString("JSBANK_PAY_PFX_PATH")
+	}
+	if viper.IsSet("JSBANK_PAY_PFX_PASSWORD") {
+		Config.JsBankPay.PFXPassword = viper.GetString("JSBANK_PAY_PFX_PASSWORD")
+	}
+	if viper.IsSet("JSBANK_PAY_PUBLIC_CERT_PATH") {
+		Config.JsBankPay.PublicCertPath = viper.GetString("JSBANK_PAY_PUBLIC_CERT_PATH")
+	}
+	if Config.JsBankPay.AppID == "" {
+		Config.JsBankPay.AppID = Config.Wechat.AppID
+	}
+
 }
 
 // mergeEnvConfig 从环境变量合并配置（优先级最高）
@@ -351,6 +408,46 @@ func mergeEnvConfig() {
 		Config.WechatPay.CallbackURL = env
 	}
 
+	if env := os.Getenv("JSBANK_PAY_ENABLED"); env != "" {
+		Config.JsBankPay.Enabled = env == "true" || env == "1"
+	}
+	if env := os.Getenv("JSBANK_PAY_APP_ID"); env != "" {
+		Config.JsBankPay.AppID = env
+	}
+	if env := os.Getenv("JSBANK_PAY_MCH_ID"); env != "" {
+		Config.JsBankPay.MchID = env
+	}
+	if env := os.Getenv("JSBANK_PAY_MCH_NAME"); env != "" {
+		Config.JsBankPay.MchName = env
+	}
+	if env := os.Getenv("JSBANK_PAY_MASTER_ACCOUNT"); env != "" {
+		Config.JsBankPay.MasterAccount = env
+	}
+	if env := os.Getenv("JSBANK_PAY_PARTNER_ID"); env != "" {
+		Config.JsBankPay.PartnerID = env
+	}
+	if env := os.Getenv("JSBANK_PAY_DEVICE_NO"); env != "" {
+		Config.JsBankPay.DeviceNo = env
+	}
+	if env := os.Getenv("JSBANK_PAY_POST_URL"); env != "" {
+		Config.JsBankPay.PostURL = env
+	}
+	if env := os.Getenv("JSBANK_PAY_NOTIFY_URL"); env != "" {
+		Config.JsBankPay.NotifyURL = env
+	}
+	if env := os.Getenv("JSBANK_PAY_PFX_PATH"); env != "" {
+		Config.JsBankPay.PFXPath = env
+	}
+	if env := os.Getenv("JSBANK_PAY_PFX_PASSWORD"); env != "" {
+		Config.JsBankPay.PFXPassword = env
+	}
+	if env := os.Getenv("JSBANK_PAY_PUBLIC_CERT_PATH"); env != "" {
+		Config.JsBankPay.PublicCertPath = env
+	}
+	if Config.JsBankPay.AppID == "" {
+		Config.JsBankPay.AppID = Config.Wechat.AppID
+	}
+
 }
 
 // getDefaultConfig 获取默认配置
@@ -392,6 +489,20 @@ func getDefaultConfig() *AppConfig {
 		Wechat: Wechat{
 			AppID:     "",
 			AppSecret: "",
+		},
+		JsBankPay: JsBankPay{
+			Enabled:        false,
+			AppID:          "",
+			MchID:          "",
+			MchName:        "",
+			MasterAccount:  "",
+			PartnerID:      "",
+			DeviceNo:       "",
+			PostURL:        "",
+			NotifyURL:      "",
+			PFXPath:        "",
+			PFXPassword:    "",
+			PublicCertPath: "",
 		},
 		WechatPay: WechatPay{
 			SPMchID:      "",

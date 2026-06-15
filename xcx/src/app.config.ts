@@ -3,6 +3,7 @@ export default defineAppConfig({
     'pages/index/index',
     'pages/settings/index',
     'pages/debug/index',
+    'pages/payment/index',
     'pages/webview/index',
   ],
   window: {

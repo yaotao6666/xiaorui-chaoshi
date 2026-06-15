@@ -490,12 +490,21 @@ export interface CreateOrderRequest {
   contact_phone?: string
   pickup_point_id?: number
   remark?: string
+  source?: string
+}
+
+export interface CreateOrderPayment {
+  enabled: boolean
+  status: string
+  message: string
+  next_action: 'view_order_detail' | 'open_xcx_payment' | 'show_xcx_pay_guide'
+  prepare_url?: string
 }
 
 // 创建订单响应
 export interface CreateOrderResponse {
   order: Order
-  pay_params?: WechatPayParams
+  payment: CreateOrderPayment
 }
 
 // 微信支付参数

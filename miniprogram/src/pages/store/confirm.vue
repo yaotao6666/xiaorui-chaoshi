@@ -220,9 +220,10 @@ import {
   formatUserAddress,
   getPreferredAddress
 } from '../../utils/address'
+import { openXcxPaymentPage } from '../../utils/miniProgramBridge'
 
 const cartStore = useCartStore()
-const { trackPageView, trackPayment } = useAnalytics()
+const { trackPageView } = useAnalytics()
 
 const deliveryTypes = [
   { value: 1, name: '配送', icon: '🚚' },
@@ -594,6 +595,16 @@ function applyFinalOrderAmount(order: Order) {
   finalOrder.value = order
 }
 
+function buildOrderDetailUrl(orderId: number) {
+  return `/pages/store/order-detail?order_id=${orderId}&merchant_id=${merchantId.value}`
+}
+
+function openOrderDetail(orderId: number) {
+  uni.redirectTo({
+    url: buildOrderDetailUrl(orderId)
+  })
+}
+
 async function submitOrder() {
   if (submitting.value) {
     return
@@ -658,7 +669,8 @@ async function submitOrder() {
       quantity: item.quantity
     })),
     delivery_type: deliveryType.value,
-    remark: remark.value
+    remark: remark.value,
+    source: entrySource.value
   }
 
   if (deliveryType.value === 1) {
@@ -680,13 +692,31 @@ async function submitOrder() {
     uni.hideLoading()
     cartStore.clearCart()
     uni.showToast({ title: '订单创建成功', icon: 'success' })
-    await trackPayment(merchantId.value, res.order.id, res.order.pay_amount)
 
-    setTimeout(() => {
-      uni.redirectTo({
-        url: `/pages/store/my-orders?merchant_id=${merchantId.value}`
-      })
-    }, 1500)
+    setTimeout(async () => {
+      if (res.payment.next_action === 'view_order_detail') {
+        openOrderDetail(res.order.id)
+        return
+      }
+
+      if (res.payment.next_action === 'open_xcx_payment') {
+        try {
+          await openXcxPaymentPage({
+            orderId: res.order.id,
+            merchantId: merchantId.value,
+            returnTarget: buildOrderDetailUrl(res.order.id)
+          })
+          return
+        } catch (error: any) {
+          uni.showToast({ title: error?.message || '拉起小程序支付失败', icon: 'none' })
+          openOrderDetail(res.order.id)
+          return
+        }
+      }
+
+      uni.showToast({ title: res.payment.message || '请在小程序中完成支付', icon: 'none' })
+      openOrderDetail(res.order.id)
+    }, 1200)
     submitting.value = false
   } catch (error: any) {
     uni.hideLoading()

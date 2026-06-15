@@ -77,6 +77,11 @@ func setupRoutes(r *gin.Engine) {
 			authGroup.POST("/user/wechat-login", user.WechatLogin)
 		}
 
+		paymentGroup := v1.Group("/payments")
+		{
+			paymentGroup.POST("/jsbank/notify", user.HandleJsBankPayNotify)
+		}
+
 		// 文件上传接口
 		uploadHandler := upload.NewUploadHandler()
 		uploadGroup := v1.Group("/upload")
@@ -111,6 +116,7 @@ func setupRoutes(r *gin.Engine) {
 		{
 			userGroup.GET("/orders", user.GetOrders)
 			userGroup.GET("/orders/:order_id", user.GetOrderDetail)
+			userGroup.POST("/orders/:order_id/pay/prepare", user.PrepareOrderPayment)
 			userGroup.POST("/orders/:order_id/cancel", user.CancelOrder)
 			userGroup.POST("/orders/:order_id/refund", user.ApplyRefund)
 			userGroup.GET("/addresses", user.GetAddresses)

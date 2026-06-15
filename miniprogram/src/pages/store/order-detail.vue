@@ -124,6 +124,9 @@
     </view>
 
     <view class="bottom-bar">
+      <button v-if="canContinuePay" class="btn primary" :disabled="submitting" @click="continuePay">
+        {{ continuePayText }}
+      </button>
       <button v-if="canCancel" class="btn secondary" :disabled="submitting" @click="cancelOrder">
         取消订单
       </button>
@@ -164,15 +167,20 @@ import { DeliveryTypeText, OrderStatus, OrderStatusText } from '@types'
 import type { Order } from '@types'
 import { BrandAsset } from '../../utils/constants'
 import { useAuth } from '../../utils/useAuth'
+import { isMiniProgramWebview, openXcxPaymentPage } from '../../utils/miniProgramBridge'
 
 const order = ref<Order | null>(null)
 const showVerify = ref(false)
 const submitting = ref(false)
 
 const canCancel = computed(() => order.value?.status === OrderStatus.PENDING_PAYMENT)
+const canContinuePay = computed(() => order.value?.status === OrderStatus.PENDING_PAYMENT)
 const canRefund = computed(() => {
   return order.value?.status === OrderStatus.PAID
 })
+const continuePayText = computed(() => (
+  isMiniProgramWebview() ? '去小程序支付' : '请在小程序中支付'
+))
 const deliveryAddressText = computed(() => {
   return order.value?.delivery_info?.address || order.value?.delivery_address || ''
 })
@@ -191,7 +199,7 @@ onLoad(async (options: any) => {
     return
   }
 
-  const orderId = Number(options?.id || 0)
+  const orderId = Number(options?.id || options?.order_id || 0)
   if (orderId > 0) {
     await loadOrder(orderId)
   }
@@ -299,6 +307,26 @@ async function cancelOrder() {
       }
     }
   })
+}
+
+async function continuePay() {
+  if (!order.value) {
+    return
+  }
+  if (!isMiniProgramWebview()) {
+    uni.showToast({ title: '请在小程序壳中完成支付', icon: 'none' })
+    return
+  }
+
+  try {
+    await openXcxPaymentPage({
+      orderId: order.value.id,
+      merchantId: order.value.merchant_id,
+      returnTarget: `/pages/store/order-detail?order_id=${order.value.id}&merchant_id=${order.value.merchant_id}`
+    })
+  } catch (error: any) {
+    uni.showToast({ title: error?.message || '拉起小程序支付失败', icon: 'none' })
+  }
 }
 
 function contactMerchantForRefund() {
