@@ -53,6 +53,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { createUserAddress, updateUserAddress } from '@api'
 import type { UserAddress } from '@types'
 import { useAuth } from '../../utils/useAuth'
+import { syncCurrentPageTitle } from '../../utils/embeddedShell'
 import {
   STORE_ADDRESS_LIST_REFRESH_KEY,
   STORE_EDIT_ADDRESS_KEY,
@@ -78,6 +79,7 @@ const regionValue = computed(() => [form.province || '', form.city || '', form.d
 const hasRegion = computed(() => Boolean(form.province || form.city || form.district))
 
 onLoad(async (options: any) => {
+  void syncCurrentPageTitle('/pages/store/address-edit')
   source.value = options?.source || 'list'
   addressId.value = Number(options?.id || 0) || null
 

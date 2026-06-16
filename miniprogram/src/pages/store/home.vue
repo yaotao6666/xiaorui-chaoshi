@@ -371,6 +371,7 @@ import { parseStoreEntryOptions } from '@utils/storeEntry'
 import { useAuth } from '../../utils/useAuth'
 import type { StoreHomeInfo, Product, SpecOption, StoreProductGroup } from '@types'
 import { BrandAsset } from '../../utils/constants'
+import { syncCurrentPageTitle } from '../../utils/embeddedShell'
 
 const cartStore = useCartStore()
 const { trackVisit, trackPageView } = useAnalytics()
@@ -505,7 +506,6 @@ function applyEntryOptions(options?: Record<string, any>) {
 
   currentMerchantId.value = merchantId
   entrySource.value = source
-
   if (merchantChanged) {
     _loadRetryCount = 0
     resetStoreHomeState()
@@ -514,6 +514,7 @@ function applyEntryOptions(options?: Record<string, any>) {
 
 onLoad(async (options) => {
   applyEntryOptions(options as Record<string, any> | undefined)
+  void syncCurrentPageTitle('/pages/store/home')
 
   // #ifdef MP-WEIXIN
   const authed = await ensureAuth()
@@ -543,6 +544,7 @@ onShow(() => {
     const pages = getCurrentPages()
     const currentPage = pages[pages.length - 1] as any
     applyEntryOptions(currentPage?.options)
+    await syncCurrentPageTitle('/pages/store/home')
     const merchantId = currentMerchantId.value
     const source = entrySource.value
 

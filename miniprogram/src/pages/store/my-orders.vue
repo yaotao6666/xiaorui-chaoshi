@@ -131,6 +131,7 @@ import { OrderStatus, OrderStatusText } from '@types'
 import type { Order } from '@types'
 import { BrandAsset } from '../../utils/constants'
 import { useAuth } from '../../utils/useAuth'
+import { syncCurrentPageTitle } from '../../utils/embeddedShell'
 
 const statusTabs = [
   { label: '全部', value: 0 },
@@ -152,6 +153,7 @@ const showVerify = ref(false)
 const currentOrder = ref<Order | null>(null)
 
 onShow(async () => {
+  await syncCurrentPageTitle('/pages/store/my-orders')
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1] as any
   const mid = currentPage?.options?.merchant_id

@@ -71,6 +71,7 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useCartStore } from '../../stores/cart'
 import type { CartItem } from '../../stores/cart'
+import { syncCurrentPageTitle } from '../../utils/embeddedShell'
 
 const cartStore = useCartStore()
 const selectedItems = ref<Set<string>>(new Set())
@@ -78,6 +79,7 @@ const merchantId = ref(1)
 
 onShow(() => {
   cartStore.restoreFromStorage()
+  void syncCurrentPageTitle('/pages/store/cart')
   
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1] as any

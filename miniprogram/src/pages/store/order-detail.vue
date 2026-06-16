@@ -168,6 +168,7 @@ import type { Order } from '@types'
 import { BrandAsset } from '../../utils/constants'
 import { useAuth } from '../../utils/useAuth'
 import { isMiniProgramWebview, openXcxPaymentPage } from '../../utils/miniProgramBridge'
+import { syncCurrentPageTitle } from '../../utils/embeddedShell'
 
 const order = ref<Order | null>(null)
 const showVerify = ref(false)
@@ -179,7 +180,7 @@ const canRefund = computed(() => {
   return order.value?.status === OrderStatus.PAID
 })
 const continuePayText = computed(() => (
-  isMiniProgramWebview() ? '去小程序支付' : '请在小程序中支付'
+  isMiniProgramWebview() ? '去支付' : '请在小程序中支付'
 ))
 const deliveryAddressText = computed(() => {
   return order.value?.delivery_info?.address || order.value?.delivery_address || ''
@@ -192,6 +193,7 @@ const contactPhoneText = computed(() => {
 })
 
 onLoad(async (options: any) => {
+  await syncCurrentPageTitle('/pages/store/order-detail')
   const { ensureAuth } = useAuth()
   const authed = await ensureAuth()
   if (!authed) {

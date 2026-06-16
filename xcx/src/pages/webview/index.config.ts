@@ -1,3 +1,3 @@
 export default definePageConfig({
-  navigationBarTitleText: 'H5 容器',
+  navigationBarTitleText: '商家助手',
 })

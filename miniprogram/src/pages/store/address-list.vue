@@ -44,6 +44,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { deleteUserAddress, getUserAddresses, updateUserAddress } from '@api'
 import type { UserAddress } from '@types'
 import { useAuth } from '../../utils/useAuth'
+import { syncCurrentPageTitle } from '../../utils/embeddedShell'
 import {
   STORE_ADDRESS_LIST_REFRESH_KEY,
   STORE_EDIT_ADDRESS_KEY,
@@ -57,6 +58,7 @@ const selectedAddressId = ref<number | null>(null)
 const source = ref('confirm')
 
 onLoad(async (options: any) => {
+  void syncCurrentPageTitle('/pages/store/address-list')
   source.value = options?.source || 'confirm'
   const currentSelectedId = Number(options?.selected_id || 0)
   selectedAddressId.value = currentSelectedId > 0 ? currentSelectedId : null
@@ -71,6 +73,7 @@ onLoad(async (options: any) => {
 })
 
 onShow(async () => {
+  await syncCurrentPageTitle('/pages/store/address-list')
   const shouldRefresh = uni.getStorageSync(STORE_ADDRESS_LIST_REFRESH_KEY)
   if (shouldRefresh) {
     uni.removeStorageSync(STORE_ADDRESS_LIST_REFRESH_KEY)

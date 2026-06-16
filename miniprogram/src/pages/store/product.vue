@@ -111,6 +111,7 @@ import { useAnalytics } from '@utils/analytics'
 import { parseStoreProductEntryOptions } from '@utils/storeEntry'
 import type { Product, SpecOption } from '@types'
 import { BrandAsset } from '../../utils/constants'
+import { syncCurrentPageTitle } from '../../utils/embeddedShell'
 
 const cartStore = useCartStore()
 const { trackProductView } = useAnalytics()
@@ -169,12 +170,14 @@ function applyEntryOptions(options?: Record<string, any>) {
 
 onLoad((options) => {
   applyEntryOptions(options as Record<string, any> | undefined)
+  void syncCurrentPageTitle('/pages/store/product')
 })
 
 onShow(() => {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1] as any
   applyEntryOptions(currentPage?.options)
+  void syncCurrentPageTitle('/pages/store/product')
   loadProduct()
 })
 

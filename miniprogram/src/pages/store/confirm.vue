@@ -221,6 +221,7 @@ import {
   getPreferredAddress
 } from '../../utils/address'
 import { openXcxPaymentPage } from '../../utils/miniProgramBridge'
+import { syncCurrentPageTitle } from '../../utils/embeddedShell'
 
 const cartStore = useCartStore()
 const { trackPageView } = useAnalytics()
@@ -269,12 +270,14 @@ function applyEntryOptions(options?: Record<string, any>) {
 
 onLoad((options) => {
   applyEntryOptions(options as Record<string, any> | undefined)
+  void syncCurrentPageTitle('/pages/store/confirm')
 })
 
 onShow(async () => {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1] as any
   applyEntryOptions(currentPage?.options)
+  await syncCurrentPageTitle('/pages/store/confirm')
 
   // 配送规则属于公开店铺数据，不应被登录流程阻塞。
   await Promise.all([loadDeliveryRules(), loadPickupPoints(), loadFullReductionRules()])

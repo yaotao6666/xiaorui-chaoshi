@@ -3,6 +3,7 @@ declare global {
     wx?: {
       miniProgram?: {
         navigateTo: (options: { url: string; success?: () => void; fail?: (error: unknown) => void }) => void
+        postMessage?: (options: { data: Record<string, unknown> }) => void
       }
       ready?: (callback: () => void) => void
     }
@@ -13,6 +14,7 @@ declare global {
 const WECHAT_JSSDK_URL = 'https://res.wx.qq.com/open/js/jweixin-1.6.0.js'
 
 let sdkLoadingPromise: Promise<void> | null = null
+let lastSyncedTitle = ''
 
 function isH5Runtime() {
   return typeof window !== 'undefined' && typeof document !== 'undefined'
@@ -85,4 +87,29 @@ export async function openXcxPaymentPage(params: {
       fail: (error) => reject(error instanceof Error ? error : new Error('跳转小程序支付页失败'))
     })
   })
+}
+
+export async function syncMiniProgramTitle(title: string) {
+  const nextTitle = String(title || '').trim()
+  if (!nextTitle || lastSyncedTitle === nextTitle) {
+    return
+  }
+
+  if (isH5Runtime()) {
+    document.title = nextTitle
+  }
+
+  if (!isMiniProgramWebview()) {
+    lastSyncedTitle = nextTitle
+    return
+  }
+
+  await loadWechatJSSDK()
+  window.wx?.miniProgram?.postMessage?.({
+    data: {
+      type: 'page_title_sync',
+      title: nextTitle
+    }
+  })
+  lastSyncedTitle = nextTitle
 }
