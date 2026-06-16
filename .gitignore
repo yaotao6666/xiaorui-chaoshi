@@ -48,3 +48,6 @@ server/.env.production
 
 # 嵌套仓库（不纳入版本控制）
 chaoshi/
+
+# 避免误提交大文件
+xcx.zip
