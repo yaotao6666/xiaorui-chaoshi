@@ -382,12 +382,12 @@ func GetMerchantList(c *gin.Context) {
 
 		var totalOrders int64
 		database.DB.Model(&models.Order{}).
-			Where("merchant_id = ?", m.ID).
+			Where("merchant_id = ? AND status IN (2, 3)", m.ID).
 			Count(&totalOrders)
 
 		var totalAmount float64
 		database.DB.Model(&models.Order{}).
-			Where("merchant_id = ? AND status >= 2", m.ID).
+			Where("merchant_id = ? AND status IN (2, 3)", m.ID).
 			Select("COALESCE(SUM(pay_amount), 0)").
 			Scan(&totalAmount)
 

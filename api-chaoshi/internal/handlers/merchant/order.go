@@ -353,11 +353,16 @@ func GetOrderStatistics(c *gin.Context) {
 	var completedOrders int64
 	var refundedAmount float64
 
+	now := time.Now()
+	location := now.Location()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, location)
+	todayEnd := todayStart.Add(24 * time.Hour)
+
 	database.DB.Model(&models.Order{}).Where("merchant_id = ?", merchantID).Count(&totalOrders)
 	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND status >= 2", merchantID).Select("COALESCE(SUM(pay_amount), 0)").Scan(&totalAmount)
-	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND DATE(created_at) = CURDATE()", merchantID).Count(&todayOrders)
-	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND DATE(created_at) = CURDATE() AND status >= 2", merchantID).Select("COALESCE(SUM(pay_amount), 0)").Scan(&todayAmount)
-	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND status = 1", merchantID).Count(&pendingOrders)
+	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND status IN (2, 3) AND paid_at >= ? AND paid_at < ?", merchantID, todayStart, todayEnd).Count(&todayOrders)
+	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND status IN (2, 3) AND paid_at >= ? AND paid_at < ?", merchantID, todayStart, todayEnd).Select("COALESCE(SUM(pay_amount), 0)").Scan(&todayAmount)
+	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND status = 2", merchantID).Count(&pendingOrders)
 	database.DB.Model(&models.Order{}).Where("merchant_id = ? AND status = 3", merchantID).Count(&completedOrders)
 	database.DB.Model(&models.Refund{}).Joins("JOIN orders ON orders.id = refunds.order_id").Where("orders.merchant_id = ? AND refunds.status = 1", merchantID).Select("COALESCE(SUM(refund_amount), 0)").Scan(&refundedAmount)
 
@@ -412,26 +417,26 @@ func GetAnalyticsOverview(c *gin.Context) {
 	var paySuccessUsers int64
 
 	database.DB.Model(&models.Order{}).
-		Where("merchant_id = ? AND status >= 2 AND created_at >= ? AND created_at < ?", merchantID, start, end).
+		Where("merchant_id = ? AND status IN (2, 3) AND paid_at >= ? AND paid_at < ?", merchantID, start, end).
 		Select("COALESCE(SUM(pay_amount), 0)").
 		Scan(&totalSales)
 	database.DB.Model(&models.Order{}).
-		Where("merchant_id = ? AND status >= 2 AND created_at >= ? AND created_at < ?", merchantID, start, end).
+		Where("merchant_id = ? AND status IN (2, 3) AND paid_at >= ? AND paid_at < ?", merchantID, start, end).
 		Count(&totalOrders)
 	database.DB.Model(&models.Order{}).
-		Where("merchant_id = ? AND status >= 2 AND created_at >= ? AND created_at < ?", merchantID, start, end).
+		Where("merchant_id = ? AND status IN (2, 3) AND paid_at >= ? AND paid_at < ?", merchantID, start, end).
 		Distinct("user_id").
 		Count(&totalCustomers)
 
 	database.DB.Model(&models.Order{}).
-		Where("merchant_id = ? AND status >= 2 AND created_at >= ? AND created_at < ?", merchantID, prevStart, prevEnd).
+		Where("merchant_id = ? AND status IN (2, 3) AND paid_at >= ? AND paid_at < ?", merchantID, prevStart, prevEnd).
 		Select("COALESCE(SUM(pay_amount), 0)").
 		Scan(&prevSales)
 	database.DB.Model(&models.Order{}).
-		Where("merchant_id = ? AND status >= 2 AND created_at >= ? AND created_at < ?", merchantID, prevStart, prevEnd).
+		Where("merchant_id = ? AND status IN (2, 3) AND paid_at >= ? AND paid_at < ?", merchantID, prevStart, prevEnd).
 		Count(&prevOrders)
 	database.DB.Model(&models.Order{}).
-		Where("merchant_id = ? AND status >= 2 AND created_at >= ? AND created_at < ?", merchantID, prevStart, prevEnd).
+		Where("merchant_id = ? AND status IN (2, 3) AND paid_at >= ? AND paid_at < ?", merchantID, prevStart, prevEnd).
 		Distinct("user_id").
 		Count(&prevCustomers)
 
